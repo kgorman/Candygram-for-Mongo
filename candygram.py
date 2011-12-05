@@ -21,10 +21,10 @@ def killsess(c,opid):
     result=c.admin["$cmd.sys.killop"].find_one(thesession)
     print result
 
-def killlongrunners(connection,inprog,threshold):
+def killlongrunners(connection,inprog,t):
     for i in inprog:
-          if i["secs_running"] > threshold and i["ns"] != "local.oplog.rs" :
-              killsess(connection,i["opid"])
+        if i["secs_running"] > t and i["ns"] != "local.oplog.rs" :
+            killsess(connection,i["opid"])
               
 def killorphan(connection,inprog):
     for i in inprog:
@@ -36,14 +36,14 @@ def killidle(connection,inprog):
         if i["active"] == "false":
             killsess(connection,i["opid"])
             
-def killblockers(connection,inprog,threshold):
+def killblockers(connection,inprog,t):
     for i in inprog:
-        if i["active"] == "true" and i["waitingForLock"] == "false" and i["secs_running"] > threshold:
+        if i["active"] == "true" and i["waitingForLock"] == "false" and i["secs_running"] > t:
             killsess(connection,i["opid"])
             
-def killwaiters(connection,inprog,threshold):
+def killwaiters(connection,inprog,t):
     for i in inprog:
-        if i["active"] == "true" and i["waitingForLock"] == "true" and i["secs_running"] > threshold:
+        if i["active"] == "true" and i["waitingForLock"] == "true" and i["secs_running"] > t:
             killsess(connection,i["opid"])
     
 def main():
@@ -56,7 +56,7 @@ def main():
     parser.add_option("--idle",action="store_true",dest="idle")
     parser.add_option("--orphan",action="store_true",dest="orphan")
     parser.add_option("--longrunners",action="store_true",dest="longrunners")
-    parser.add_option("-t","--threshold",dest="threshold")
+    parser.add_option("-t","--threshold",dest="threshold",type="int")
     (options, args) = parser.parse_args()
    
     connection = Connection( options.host , options.port )
@@ -67,11 +67,11 @@ def main():
     if options.idle:
         killidle(connection,inprog)
     if options.waiters:
-        killwaiters(connection,inprog,threshold)
+        killwaiters(connection,inprog,options.threshold)
     if options.blockers:
-        killblockers(connection,inprog,threshold)
+        killblockers(connection,inprog,options.threshold)
     if options.longrunners:
-        killlongrunners(connection,inprog,threshold)
+        killlongrunners(connection,inprog,options.threshold)
 
 if __name__ == "__main__":
     main()
