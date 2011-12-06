@@ -7,17 +7,15 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo import Connection
 from optparse import OptionParser
 
-global testmode    # a global for running, but not killing, just reporting what would have been done
-testmode = False
-
-
 def getinprog(c):
     inprog=c.admin["$cmd.sys.inprog"].find_one({'$all': True},  _is_command=True)
     return inprog["inprog"]
 
 def killsess(c,opid):
     thesession={}
-    if not testmode:
+    if options.testmode:
+        print "I am in testmode (--testmode), so I am not actually killing, but I would have killed opid %s" % opid
+    else:
         if opid != 0:
             print "killing %s" % opid
             thesession["op"]=opid
@@ -25,9 +23,7 @@ def killsess(c,opid):
             print result
         else:
             print "not killing opid %s" % opid
-    else:
-        "I am in testmode (--testmode), so I am not actually killing, but I would have killed opid %s" % opid
-
+    
 def killlongrunners(connection,inprog,t):
     for i in inprog:
         if "secs_running" in i:
@@ -55,24 +51,10 @@ def killwaiters(connection,inprog,t):
             killsess(connection,i["opid"])
     
 def main():
-    parser = OptionParser()
-    parser.set_defaults(host="localhost",port="27017",threshold=30)
-    parser.add_option("--port",dest="port",type=int,help="host port to connect to")
-    parser.add_option("--host",dest="host",help="host to connect to")
-    parser.add_option("--blockers",action="store_true",dest="blockers")
-    parser.add_option("--waiters",action="store_true",dest="waiters")
-    parser.add_option("--idle",action="store_true",dest="idle")
-    parser.add_option("--orphan",action="store_true",dest="orphan")
-    parser.add_option("--longrunners",action="store_true",dest="longrunners")
-    parser.add_option("--threshold",dest="threshold",type="int")
-    parser.add_option("--testmode",dest="testmode",action="store_true")
-    (options, args) = parser.parse_args()
    
     connection = Connection( options.host , options.port )
     inprog=getinprog(connection)
-    
-    testmode = options.testmode
-
+        
     if options.orphan:
         killorphan(connection,inprog)
     if options.idle:
@@ -85,4 +67,18 @@ def main():
         killlongrunners(connection,inprog,options.threshold)
 
 if __name__ == "__main__":
+
+    parser = OptionParser()
+    parser.set_defaults(host="localhost",port="27017",threshold=30)
+    parser.add_option("--port",dest="port",type=int,help="host port to connect to")
+    parser.add_option("--host",dest="host",help="host to connect to")
+    parser.add_option("--blockers",action="store_true",dest="blockers")
+    parser.add_option("--waiters",action="store_true",dest="waiters")
+    parser.add_option("--idle",action="store_true",dest="idle")
+    parser.add_option("--orphan",action="store_true",dest="orphan")
+    parser.add_option("--longrunners",action="store_true",dest="longrunners")
+    parser.add_option("--threshold",dest="threshold",type="int")
+    parser.add_option("--testmode",dest="testmode",action="store_true")
+    (options, args) = parser.parse_args()
+
     main()
