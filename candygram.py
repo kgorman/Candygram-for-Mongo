@@ -18,7 +18,7 @@ def killsess(c,opid):
     thesession={}
     thesession["op"]=opid
     print thesession
-    result=c.admin["$cmd.sys.killop"].find_one(thesession)
+    result=c.admin["$cmd.sys.killop"].find_one(thesession, _is_command=True)
     print result
 
 def killlongrunners(connection,inprog,t):
