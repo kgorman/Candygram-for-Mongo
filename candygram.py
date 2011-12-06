@@ -7,24 +7,32 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo import Connection
 from optparse import OptionParser
 
+global testmode    # a global for running, but not killing, just reporting what would have been done
+testmode = False
+
 
 def getinprog(c):
-    inprog=c.admin["$cmd.sys.inprog"].find_one({'$all': True})
-    print inprog
+    inprog=c.admin["$cmd.sys.inprog"].find_one({'$all': True},  _is_command=True)
     return inprog["inprog"]
 
 def killsess(c,opid):
-    print "I am killing %s" % opid
     thesession={}
-    thesession["op"]=opid
-    print thesession
-    result=c.admin["$cmd.sys.killop"].find_one(thesession, _is_command=True)
-    print result
+    if not testmode:
+        if opid != 0:
+            print "killing %s" % opid
+            thesession["op"]=opid
+            result=c.admin["$cmd.sys.killop"].find_one(thesession, _is_command=True)
+            print result
+        else:
+            print "not killing opid %s" % opid
+    else:
+        "I am in testmode (--testmode), so I am not actually killing, but I would have killed opid %s" % opid
 
 def killlongrunners(connection,inprog,t):
     for i in inprog:
-        if i["secs_running"] > t and i["ns"] != "local.oplog.rs" :
-            killsess(connection,i["opid"])
+        if "secs_running" in i:
+            if i["secs_running"] > t and i["ns"] != "local.oplog.rs" :
+                killsess(connection,i["opid"])
               
 def killorphan(connection,inprog):
     for i in inprog:
@@ -56,11 +64,14 @@ def main():
     parser.add_option("--idle",action="store_true",dest="idle")
     parser.add_option("--orphan",action="store_true",dest="orphan")
     parser.add_option("--longrunners",action="store_true",dest="longrunners")
-    parser.add_option("-t","--threshold",dest="threshold",type="int")
+    parser.add_option("--threshold",dest="threshold",type="int")
+    parser.add_option("--testmode",dest="testmode",action="store_true")
     (options, args) = parser.parse_args()
    
     connection = Connection( options.host , options.port )
     inprog=getinprog(connection)
+    
+    testmode = options.testmode
 
     if options.orphan:
         killorphan(connection,inprog)
