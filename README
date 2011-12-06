@@ -1,0 +1,12 @@
+Candygram for Mongo
+
+What is it?
+This is a utility that allows MongoDB administrators to kill off sessions on the DB based on various conditions.  It can be dangerous, so know what you are doing when you use it or run it with the --testmode switch to show you what it would have run, but not actually do it.
+
+Motivation for creating it?
+Many times in a production environment there can be a dog-pile effect if performance for some reason goes bad.  Let's say that somehow an index was missing, and some new code was deployed that required it.  Let's say all the sudden the DB gets flooded with tons of queries that now take 5 minutes vs the 1 second they used to.  In general what will happen is the driver will request the query, but it will timeout before the query finishes.  But the query continues on the server.  The user hits the same page again, asking for another query.  The cycle continues until the DB goes into the ground and is effectively 'down' because it's so slow trying to run all these horrid queries.
+
+Candygram allows the admin to respond to this kind of situation and kill off all the long running queries.  The application has long forgotten they were issued, and now they just are noise, they have no application to respond to.  The admin can nuke off these sessions and try to restore some order to the DB.  In the above example, perhaps get enough headroom to create the proper index.  Or perhaps just run Candygram on a cron job every 30 minutes to kill off sessions running longer than 30 seconds or something.  You decide, be careful/smart about how you use it.
+
+Yes, Candygram was inspired by the scene in Blazing Saddles.
+
